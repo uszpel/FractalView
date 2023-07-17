@@ -3,21 +3,26 @@ package main
 import (
 	"fmt"
 	"fractalview/mandelbrot"
+	"image/jpeg"
+	"os"
 	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 )
 
 type appConfig struct {
-	buttons      []buttonConfig
-	status       *widget.Label
-	imageContent *fyne.Container
-	imageConfig  *mandelbrot.ImgConfig
+	exploreButtons []buttonConfig
+	downloadButton buttonConfig
+	status         *widget.Label
+	imageContent   *fyne.Container
+	imageConfig    *mandelbrot.ImgConfig
+	window         fyne.Window
 }
 
 type buttonConfig struct {
@@ -30,13 +35,13 @@ func main() {
 	myApp := app.New()
 	appConfig := initAppConfig(myApp)
 
-	myWindow := myApp.NewWindow("FractalView")
-	buttonBar := container.New(layout.NewHBoxLayout(), appConfig.buttons[0].widget, appConfig.buttons[1].widget,
-		appConfig.buttons[2].widget, appConfig.buttons[3].widget, appConfig.buttons[4].widget,
-		appConfig.buttons[5].widget, layout.NewSpacer())
-	statusBar := container.New(layout.NewHBoxLayout(), appConfig.status)
-	myWindow.SetContent(container.New(layout.NewVBoxLayout(), buttonBar, appConfig.imageContent, statusBar))
-	myWindow.ShowAndRun()
+	appConfig.window = myApp.NewWindow("FractalView")
+	buttonBar := container.New(layout.NewHBoxLayout(), appConfig.exploreButtons[0].widget, appConfig.exploreButtons[1].widget,
+		appConfig.exploreButtons[2].widget, appConfig.exploreButtons[3].widget, appConfig.exploreButtons[4].widget,
+		appConfig.exploreButtons[5].widget, layout.NewSpacer(), appConfig.downloadButton.widget)
+	statusBar := container.New(layout.NewHBoxLayout(), appConfig.status, layout.NewSpacer())
+	appConfig.window.SetContent(container.New(layout.NewVBoxLayout(), buttonBar, appConfig.imageContent, statusBar))
+	appConfig.window.ShowAndRun()
 }
 
 func (appConfig *appConfig) UpdateStatus() {
@@ -53,14 +58,20 @@ func initAppConfig(app fyne.App) *appConfig {
 	result := appConfig{}
 	result.imageConfig = mandelbrot.NewConfig()
 	result.imageContent = container.New(layout.NewMaxLayout(), createImage(result.imageConfig))
-	result.buttons = make([]buttonConfig, 6)
-	result.buttons[0] = *initButton("left", iconScheme, &result)
-	result.buttons[1] = *initButton("right", iconScheme, &result)
-	result.buttons[2] = *initButton("up", iconScheme, &result)
-	result.buttons[3] = *initButton("down", iconScheme, &result)
-	result.buttons[4] = *initButton("plus", iconScheme, &result)
-	result.buttons[5] = *initButton("minus", iconScheme, &result)
+	result.exploreButtons = make([]buttonConfig, 6)
+	result.exploreButtons[0] = *initButton("left", iconScheme, &result)
+	result.exploreButtons[1] = *initButton("right", iconScheme, &result)
+	result.exploreButtons[2] = *initButton("up", iconScheme, &result)
+	result.exploreButtons[3] = *initButton("down", iconScheme, &result)
+	result.exploreButtons[4] = *initButton("plus", iconScheme, &result)
+	result.exploreButtons[5] = *initButton("minus", iconScheme, &result)
 	result.status = widget.NewLabel("")
+	result.downloadButton = buttonConfig{
+		title: "Download",
+		widget: widget.NewButtonWithIcon("Download", nil, func() {
+			downloadImage(&result)
+		}),
+	}
 	result.UpdateStatus()
 	return &result
 }
@@ -90,7 +101,7 @@ func createImage(imgConfig *mandelbrot.ImgConfig) *canvas.Image {
 }
 
 func updateContent(appConfig *appConfig, source string) {
-	for _, button := range appConfig.buttons {
+	for _, button := range appConfig.exploreButtons {
 		button.widget.Disable()
 		button.widget.OnTapped = func() {}
 	}
@@ -102,7 +113,7 @@ func updateContent(appConfig *appConfig, source string) {
 	appConfig.imageContent.Objects[0] = createImage(appConfig.imageConfig)
 	appConfig.imageContent.Refresh()
 	time.AfterFunc(1*time.Second, func() {
-		for _, button := range appConfig.buttons {
+		for _, button := range appConfig.exploreButtons {
 			button.widget.Enable()
 			buttonText := button.title
 			button.widget.OnTapped = func() {
@@ -110,4 +121,20 @@ func updateContent(appConfig *appConfig, source string) {
 			}
 		}
 	})
+}
+
+func downloadImage(appConfig *appConfig) {
+	fileDialog := dialog.NewFileSave(appConfig.dialogCallback, appConfig.window)
+	fileDialog.SetFileName("mandelbrot.jpg")
+	fileDialog.Show()
+}
+
+func (config *appConfig) dialogCallback(closer fyne.URIWriteCloser, err error) {
+	if closer.URI() != nil {
+		img := mandelbrot.CreateImage(config.imageConfig)
+		toimg, _ := os.Create(closer.URI().Path())
+		defer toimg.Close()
+		jpeg.Encode(toimg, img, &jpeg.Options{Quality: jpeg.DefaultQuality})
+		fmt.Println("File saved at", closer.URI().Path())
+	}
 }

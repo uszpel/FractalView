@@ -69,10 +69,6 @@ func CreateImage(config *ImgConfig) *image.RGBA {
 		}(y)
 	}
 	wg.Wait()
-
-	/*toimg, _ := os.Create(fileName)
-	defer toimg.Close()
-	jpeg.Encode(toimg, img, &jpeg.Options{Quality: jpeg.DefaultQuality})*/
 	return img
 }
 
