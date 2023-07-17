@@ -130,7 +130,7 @@ func downloadImage(appConfig *appConfig) {
 }
 
 func (config *appConfig) dialogCallback(closer fyne.URIWriteCloser, err error) {
-	if closer.URI() != nil {
+	if closer != nil {
 		img := mandelbrot.CreateImage(config.imageConfig)
 		toimg, _ := os.Create(closer.URI().Path())
 		defer toimg.Close()
