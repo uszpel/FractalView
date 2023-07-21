@@ -71,8 +71,8 @@ func initAppConfig(app fyne.App) *appConfig {
 	result.exploreButtons[5] = *initButton("minus", iconScheme, &result)
 	result.status = widget.NewLabel("")
 	result.downloadButton = buttonConfig{
-		title: "Download",
-		widget: widget.NewButtonWithIcon("Download", nil, func() {
+		title: "Save",
+		widget: widget.NewButtonWithIcon("Save", nil, func() {
 			downloadImage(&result)
 		}),
 	}
@@ -140,6 +140,9 @@ func (config *appConfig) dialogCallback(closer fyne.URIWriteCloser, err error) {
 		toimg, _ := os.Create(closer.URI().Path())
 		defer toimg.Close()
 		jpeg.Encode(toimg, img, &jpeg.Options{Quality: jpeg.DefaultQuality})
-		fmt.Println("File saved at", closer.URI().Path())
+		config.SetStatus(fmt.Sprint("File saved at ", closer.URI().Path()))
+		time.AfterFunc(3*time.Second, func() {
+			config.UpdateStatus()
+		})
 	}
 }
