@@ -49,6 +49,10 @@ func (appConfig *appConfig) UpdateStatus() {
 		appConfig.imageConfig.CenterY, 1/appConfig.imageConfig.ZoomX))
 }
 
+func (appConfig *appConfig) SetStatus(text string) {
+	appConfig.status.SetText(text)
+}
+
 func initAppConfig(app fyne.App) *appConfig {
 	iconScheme := "white"
 	if app.Settings().ThemeVariant() != 0 {
@@ -109,7 +113,7 @@ func updateContent(appConfig *appConfig, source string) {
 	//log.Println("update", source)
 	appConfig.imageConfig.Move(source)
 	appConfig.imageConfig.Scale(source)
-	appConfig.UpdateStatus()
+	appConfig.SetStatus("Processing...")
 	appConfig.imageContent.Objects[0] = createImage(appConfig.imageConfig)
 	appConfig.imageContent.Refresh()
 	time.AfterFunc(1*time.Second, func() {
@@ -120,6 +124,7 @@ func updateContent(appConfig *appConfig, source string) {
 				updateContent(appConfig, buttonText)
 			}
 		}
+		appConfig.UpdateStatus()
 	})
 }
 
